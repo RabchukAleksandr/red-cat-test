@@ -1,0 +1,30 @@
+version: '3.0'
+
+services:
+  red_cat_main:
+    container_name: red_cat_main
+    build:
+      context: .
+      dockerfile: Dockerfile
+    env_file:
+      - .production.env
+    volumes:
+      - .:/app
+    ports:
+      - 3000:3000
+      - 9229:9229
+    restart: always
+  red_cat_postgres:
+    container_name: red_cat_postgres
+    image: postgres:12
+    env_file:
+      - .production.env
+    environment:
+      PG_DATA: /var/lib/postgresql/data
+    ports:
+      - 5432:5432
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    restart: always
+volumes:
+  pgdata:
