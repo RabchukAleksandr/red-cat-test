@@ -1,20 +1,20 @@
-import { Column, Entity, PrimaryGeneratedColumn } from "typeorm";
+import { Column, Entity, PrimaryGeneratedColumn } from 'typeorm';
 
 @Entity()
 export class Article {
   @PrimaryGeneratedColumn()
-  id: number
+  id: number;
 
   @Column()
-  title: string
+  title: string;
 
   @Column()
-  text: string
+  text: string;
 
   @Column()
-  author: string
+  author: string;
 
   constructor(article: Partial<Article>) {
-    Object.assign(this, article)
+    Object.assign(this, article);
   }
 }
