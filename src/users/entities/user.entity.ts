@@ -1,5 +1,12 @@
-import { Entity, PrimaryGeneratedColumn, Column, OneToMany } from 'typeorm';
-import { UserRole } from './user-role.entity';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  ManyToMany,
+  JoinTable,
+  ManyToOne,
+} from 'typeorm';
+import { Role } from '../../roles/entities/role.entity';
 
 @Entity()
 export class User {
@@ -7,8 +14,17 @@ export class User {
   id: number;
 
   @Column()
-  username: string;
+  email: string;
 
-  @OneToMany(() => UserRole, (userRole) => userRole.user)
-  roles: UserRole[];
+  @ManyToMany(() => Role)
+  @JoinTable()
+  roles: Role[];
+
+  @ManyToOne(() => Role)
+  @JoinTable()
+  activeRole: Role;
+
+  constructor(user: Partial<User>) {
+    Object.assign(this, user);
+  }
 }
