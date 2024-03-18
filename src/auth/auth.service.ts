@@ -5,49 +5,76 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { User } from '../users/entities/user.entity';
-import { CreateUserRoleDto } from '../users/dto/create-user-role.dto';
 import { UsersService } from '../users/users.service';
 import * as bcrypt from 'bcryptjs';
 import { JwtService } from '@nestjs/jwt';
 import { CreateUserDto } from '../users/dto/create-user.dto';
+import { ConfigService } from '@nestjs/config';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
 
 @Injectable()
 export class AuthService {
   constructor(
-    private readonly usersService: UsersService,
+    @InjectRepository(User)
+    private readonly userRepository: Repository<User>,
+    private usersService: UsersService,
     private jwtService: JwtService,
+    private configService: ConfigService,
   ) {}
-  async login(userDto: CreateUserDto) {
-    const user = await this.validateUser(userDto);
-    return this.generateToken(user);
+  async signIn(createUserDto: CreateUserDto) {
+    const user = await this.validateUser(createUserDto);
+    const tokens = await this.getTokens(user);
+    await this.updateRefreshToken(user, tokens.refreshToken);
+    return tokens;
   }
 
-  async registration(createUserRoleDto: CreateUserRoleDto) {
+  async signUp(createUserDto: CreateUserDto) {
     const candidate = await this.usersService.getUserByEmail(
-      createUserRoleDto.user.email,
+      createUserDto.email,
     );
     if (candidate) {
       throw new HttpException('User exists', HttpStatus.BAD_REQUEST);
     }
-    const hashPassword = await bcrypt.hash(createUserRoleDto.user.password, 10);
+    const hashPassword = await bcrypt.hash(createUserDto.password, 10);
     const user = await this.usersService.createUser({
-      ...createUserRoleDto,
-      user: { password: hashPassword, email: createUserRoleDto.user.email },
+      password: hashPassword,
+      email: createUserDto.email,
     });
-    return this.generateToken(user);
+    const tokens = await this.getTokens(user);
+    await this.updateRefreshToken(user, tokens.refreshToken);
+    return tokens;
   }
 
-  private async generateToken(user: User) {
+  private async getTokens(user: User) {
     const payload = { email: user.email, id: user.id, roles: user.roles };
+    const [accessToken, refreshToken] = await Promise.all([
+      this.jwtService.signAsync(payload, {
+        secret: this.configService.getOrThrow('JWT_ACCESS_SECRET'),
+        expiresIn: '100m',
+      }),
+      this.jwtService.signAsync(payload, {
+        secret: this.configService.getOrThrow('JWT_REFRESH_SECRET'),
+        expiresIn: '7d',
+      }),
+    ]);
+
     return {
-      token: this.jwtService.sign(payload),
+      accessToken,
+      refreshToken,
     };
   }
+  async updateRefreshToken(user: User, refreshToken: string) {
+    const hashedRefreshToken = await bcrypt.hash(refreshToken, 10);
+    await this.userRepository.update(user.id, {
+      refreshToken: hashedRefreshToken,
+    });
+  }
 
-  private async validateUser(userDto: CreateUserDto) {
-    const user = await this.usersService.getUserByEmail(userDto.email);
+  private async validateUser(createUserDto: CreateUserDto) {
+    const user = await this.usersService.getUserByEmail(createUserDto.email);
     const passwordEquals = await bcrypt.compare(
-      userDto.password,
+      createUserDto.password,
       user.password,
     );
     if (user && passwordEquals) return user;

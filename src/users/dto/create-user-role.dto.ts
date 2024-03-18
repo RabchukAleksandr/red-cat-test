@@ -1,10 +1,4 @@
-import { CreateUserDto } from './create-user.dto';
-
-interface AttachUserRole {
+export interface CreateUserRoleDto {
   activeRole: string;
   roles: string[];
-}
-export class CreateUserRoleDto {
-  user: CreateUserDto;
-  role: AttachUserRole;
 }

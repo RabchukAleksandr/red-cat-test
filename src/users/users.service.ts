@@ -10,6 +10,7 @@ import { User } from './entities/user.entity';
 import { Role } from '../roles/entities/role.entity';
 import { CreateUserRoleDto } from './dto/create-user-role.dto';
 import { DEFAULT_USER_ROLE } from '../../config';
+import { CreateUserDto } from './dto/create-user.dto';
 
 @Injectable()
 export class UsersService {
@@ -21,30 +22,31 @@ export class UsersService {
     private readonly entityManager: EntityManager,
   ) {}
 
-  async createUser(createUserRoleDto: CreateUserRoleDto) {
-    const { user: createUserDto, role: attachRoleDto } = createUserRoleDto;
+  async attachRolesToUser(
+    createUserRoleDto: CreateUserRoleDto,
+    userId: number,
+  ) {
+    const { roles, activeRole } = createUserRoleDto;
 
-    const isActiveRoleInValid =
-      !!attachRoleDto.activeRole &&
-      !attachRoleDto.roles.includes(attachRoleDto.activeRole);
+    const user = await this.userRepository.findOneOrFail({
+      where: { id: userId },
+    });
 
-    if (isActiveRoleInValid) {
+    if (activeRole && !roles.includes(activeRole)) {
       throw new HttpException(
         'Active role should be included in roles array',
         HttpStatus.BAD_REQUEST,
       );
     }
 
-    if (attachRoleDto.roles.includes('admin')) {
+    if (roles.includes('admin')) {
       throw new HttpException(
         "Can't set admin role to user by default",
         HttpStatus.BAD_REQUEST,
       );
     }
 
-    const user = new User(createUserDto);
-
-    const roles = await this.roleRepository.find();
+    const dbRoles = await this.roleRepository.find();
 
     const defaultUserRole = await this.roleRepository.findOne({
       where: { value: DEFAULT_USER_ROLE },
@@ -52,19 +54,24 @@ export class UsersService {
 
     if (!defaultUserRole)
       throw new InternalServerErrorException(
-        'User cannot be created as default role is missing',
+        'Cannot attach a role as default role is missing',
       );
 
-    user.roles = roles.filter((role) =>
-      attachRoleDto.roles.includes(role.value),
-    ) ?? [defaultUserRole];
+    user.roles = dbRoles.filter((role) => roles.includes(role.value)) ?? [
+      defaultUserRole,
+    ];
 
     user.activeRole =
-      roles.find((role) => role.value === attachRoleDto.activeRole) ??
-      defaultUserRole;
+      dbRoles.find((role) => role.value === activeRole) ?? defaultUserRole;
 
     await this.entityManager.save(user);
 
+    return user;
+  }
+
+  async createUser(createUserDto: CreateUserDto) {
+    const user = new User(createUserDto);
+    await this.entityManager.save(user);
     return user;
   }
 
