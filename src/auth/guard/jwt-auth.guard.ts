@@ -4,7 +4,6 @@ import {
   Injectable,
   UnauthorizedException,
 } from '@nestjs/common';
-import { Observable } from 'rxjs';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 
@@ -14,9 +13,7 @@ export class JwtAuthGuard implements CanActivate {
     private jwtService: JwtService,
     private configService: ConfigService,
   ) {}
-  canActivate(
-    context: ExecutionContext,
-  ): boolean | Promise<boolean> | Observable<boolean> {
+  async canActivate(context: ExecutionContext) {
     const req = context.switchToHttp().getRequest();
     const res = context.switchToHttp().getResponse();
     try {
@@ -30,6 +27,10 @@ export class JwtAuthGuard implements CanActivate {
         secret: this.configService.getOrThrow('JWT_ACCESS_SECRET'),
         ignoreExpiration: true,
       });
+
+      if (!decodedAccessToken || typeof decodedAccessToken.exp !== 'number') {
+        throw new UnauthorizedException({ message: 'Invalid access token' });
+      }
 
       const isAccessTokenExpired =
         decodedAccessToken.exp <= Math.floor(Date.now() / 1000);
@@ -46,21 +47,12 @@ export class JwtAuthGuard implements CanActivate {
           email: decodedRefreshToken.email,
           id: decodedRefreshToken.id,
         };
-        this.jwtService
-          .signAsync(payload, {
-            secret: this.configService.getOrThrow('JWT_ACCESS_SECRET'),
-            expiresIn: '60m',
-          })
-          .then((accessToken: string) => {
-            res.cookie('accessToken', accessToken, { httpOnly: true });
-          })
-          .catch(() => {
-            throw new UnauthorizedException({ message: 'Unauthorized' });
-          });
-      }
+        const accessToken = await this.jwtService.signAsync(payload, {
+          secret: this.configService.getOrThrow('JWT_ACCESS_SECRET'),
+          expiresIn: '60m',
+        });
 
-      if (!decodedAccessToken || typeof decodedAccessToken.exp !== 'number') {
-        throw new UnauthorizedException({ message: 'Invalid access token' });
+        res.cookie('accessToken', accessToken, { httpOnly: true });
       }
 
       req.user = decodedAccessToken;
