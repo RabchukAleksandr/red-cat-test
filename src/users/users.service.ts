@@ -30,6 +30,7 @@ export class UsersService {
 
     const user = await this.userRepository.findOneOrFail({
       where: { id: userId },
+      relations: { activeRole: true },
     });
 
     if (activeRole && !roles.includes(activeRole)) {
@@ -39,7 +40,7 @@ export class UsersService {
       );
     }
 
-    if (roles.includes('admin')) {
+    if (roles.includes('admin') && user.activeRole.value !== 'admin') {
       throw new HttpException(
         "Can't set admin role to user by default",
         HttpStatus.BAD_REQUEST,
@@ -74,11 +75,16 @@ export class UsersService {
     await this.entityManager.save(user);
     return user;
   }
+  async deleteUser(userId: number) {
+    await this.entityManager.transaction(async (entityManager) => {
+      const user = await entityManager.findOne(User, {
+        where: { id: userId },
+      });
+      if (!user) {
+        throw new Error(`User with id ${userId} not found`);
+      }
 
-  async getUser() {
-    return await this.userRepository.findOne({
-      where: { id: 2 },
-      relations: { roles: true, activeRole: true },
+      await entityManager.remove(user);
     });
   }
 

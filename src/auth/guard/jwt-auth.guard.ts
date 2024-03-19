@@ -6,10 +6,15 @@ import {
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
+import { InjectRepository } from '@nestjs/typeorm';
+import { User } from '../../users/entities/user.entity';
+import { Repository } from 'typeorm';
 
 @Injectable()
 export class JwtAuthGuard implements CanActivate {
   constructor(
+    @InjectRepository(User)
+    private readonly userRepository: Repository<User>,
     private jwtService: JwtService,
     private configService: ConfigService,
   ) {}
@@ -27,6 +32,16 @@ export class JwtAuthGuard implements CanActivate {
         secret: this.configService.getOrThrow('JWT_ACCESS_SECRET'),
         ignoreExpiration: true,
       });
+
+      const user = await this.userRepository.findOne({
+        where: { id: decodedAccessToken.id },
+      });
+
+      if (!user) {
+        throw new UnauthorizedException({
+          message: `User with id ${decodedAccessToken.id} does not exist`,
+        });
+      }
 
       if (!decodedAccessToken || typeof decodedAccessToken.exp !== 'number') {
         throw new UnauthorizedException({ message: 'Invalid access token' });
@@ -58,7 +73,7 @@ export class JwtAuthGuard implements CanActivate {
       req.user = decodedAccessToken;
       return true;
     } catch (e) {
-      throw new UnauthorizedException({ message: 'Unauthorized' });
+      throw new UnauthorizedException({ message: e.message });
     }
   }
 }

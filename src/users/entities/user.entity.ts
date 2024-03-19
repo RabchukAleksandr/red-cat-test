@@ -5,8 +5,10 @@ import {
   ManyToMany,
   JoinTable,
   ManyToOne,
+  OneToMany,
 } from 'typeorm';
 import { Role } from '../../roles/entities/role.entity';
+import { Article } from '../../articles/entities/article.entity';
 
 @Entity()
 export class User {
@@ -21,6 +23,9 @@ export class User {
 
   @Column({ nullable: true })
   refreshToken: string;
+
+  @OneToMany(() => Article, (article) => article.author)
+  articles: Article[];
 
   @ManyToMany(() => Role)
   @JoinTable()

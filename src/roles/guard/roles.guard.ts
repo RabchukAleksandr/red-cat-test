@@ -4,9 +4,7 @@ import {
   HttpException,
   HttpStatus,
   Injectable,
-  UnauthorizedException,
 } from '@nestjs/common';
-import { Observable } from 'rxjs';
 import { JwtService } from '@nestjs/jwt';
 import { Reflector } from '@nestjs/core';
 import { ROLES_KEY } from '../decorator/roles-auth.decorator';
@@ -53,7 +51,6 @@ export class RolesGuard implements CanActivate {
       req.user = decodedAccessToken;
       return user.roles.some((role) => requiredRoles.includes(role.value));
     } catch (e) {
-      console.log(e);
       throw new HttpException('No permission', HttpStatus.FORBIDDEN);
     }
   }

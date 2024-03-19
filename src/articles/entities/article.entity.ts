@@ -1,4 +1,5 @@
-import { Column, Entity, PrimaryGeneratedColumn } from 'typeorm';
+import { Column, Entity, ManyToOne, PrimaryGeneratedColumn } from 'typeorm';
+import { User } from '../../users/entities/user.entity';
 
 @Entity()
 export class Article {
@@ -11,9 +12,8 @@ export class Article {
   @Column()
   text: string;
 
-  @Column()
-  author: string;
-
+  @ManyToOne(() => User, (user) => user.articles, { onDelete: 'CASCADE' })
+  author: User;
   constructor(article: Partial<Article>) {
     Object.assign(this, article);
   }
