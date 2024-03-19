@@ -2,33 +2,32 @@ import {
   Body,
   Controller,
   Delete,
+  Get,
   Param,
-  Post,
   Put,
   Req,
   UseGuards,
 } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { CreateUserRoleDto } from './dto/create-user-role.dto';
-import { CreateUserDto } from './dto/create-user.dto';
-import { ResourceOwnerGuard } from './guard/resource-owner.guard';
+import { ResourceOwnerGuard } from './guard/resource-guard.service';
 import { JwtAuthGuard } from '../auth/guard/jwt-auth.guard';
 import { AuthenticatedRequest } from '../common/authenticated-request.interface';
 
 @Controller({ path: 'users', version: '1' })
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
-  @Post()
-  create(@Body() userDto: CreateUserDto) {
-    return this.usersService.createUser(userDto);
+  @UseGuards(JwtAuthGuard, ResourceOwnerGuard)
+  @Get()
+  async getUsers() {
+    return await this.usersService.getUsers();
   }
-
   @Put(':id/roles')
-  attachRoleToUser(
+  async updateUserRoles(
     @Param('id') id: number,
     @Body() userRoleDto: CreateUserRoleDto,
   ) {
-    return this.usersService.attachRolesToUser(userRoleDto, id);
+    return await this.usersService.updateUserRoles(userRoleDto, id);
   }
 
   @UseGuards(JwtAuthGuard, ResourceOwnerGuard)

@@ -22,10 +22,10 @@ export class UsersService {
     private readonly entityManager: EntityManager,
   ) {}
 
-  async attachRolesToUser(
-    createUserRoleDto: CreateUserRoleDto,
-    userId: number,
-  ) {
+  async getUsers() {
+    return await this.userRepository.find();
+  }
+  async updateUserRoles(createUserRoleDto: CreateUserRoleDto, userId: number) {
     const { roles, activeRole } = createUserRoleDto;
 
     const user = await this.userRepository.findOneOrFail({

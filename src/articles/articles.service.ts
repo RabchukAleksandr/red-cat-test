@@ -27,8 +27,12 @@ export class ArticlesService {
     await this.entityManager.save(article);
   }
 
-  async findAll() {
-    return await this.articleRepository.find();
+  async findAll(page: number, limit: number) {
+    const skip = (page - 1) * limit;
+    return await this.articleRepository.find({
+      skip,
+      take: limit,
+    });
   }
 
   async findOne(id: number) {

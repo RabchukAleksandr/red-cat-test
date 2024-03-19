@@ -43,7 +43,7 @@ export class RolesGuard implements CanActivate {
 
       const user = await this.userRepository.findOne({
         where: {
-          email: decodedAccessToken.email,
+          id: decodedAccessToken.id,
         },
         relations: { roles: true },
       });

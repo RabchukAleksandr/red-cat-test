@@ -1,19 +1,37 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { EntityManager, Repository } from 'typeorm';
+import { Repository } from 'typeorm';
 import { Role } from './entities/role.entity';
-import { CreateRoleDto } from './dto/create-role.dto';
 
 @Injectable()
 export class RolesService {
   constructor(
     @InjectRepository(Role)
-    private readonly roleRepository: Repository<Role>,
-    private readonly entityManager: EntityManager,
+    private roleRepository: Repository<Role>,
   ) {}
+  async seedData() {
+    const postData: Partial<Role>[] = [
+      {
+        value: 'admin',
+        description:
+          'Manage users (read, delete).Manage articles (read, delete), regardless of who created them.',
+      },
+      {
+        value: 'editor',
+        description:
+          'Create and read articles, update and delete their articles.',
+      },
+      {
+        value: 'viewer',
+        description: 'Read-only access to articles.',
+      },
+    ];
 
-  async createRole(createRoleDto: CreateRoleDto) {
-    const role = new Role(createRoleDto);
-    await this.entityManager.save(role);
+    try {
+      await this.roleRepository.save(postData);
+      Logger.log('Data seeded successfully');
+    } catch (error) {
+      Logger.error(`Error seeding data: ${error.message}`, error.stack);
+    }
   }
 }

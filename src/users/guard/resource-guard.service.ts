@@ -28,7 +28,6 @@ export class ResourceOwnerGuard implements CanActivate {
       where: { id: user.id },
       relations: { activeRole: true },
     });
-    const activeRoleValue = dbUser.activeRole?.value || null;
 
     switch (resourceInstanceName) {
       case 'articles':
@@ -39,12 +38,12 @@ export class ResourceOwnerGuard implements CanActivate {
         if (!article) {
           throw new NotFoundException(`Article with id ${params.id} not found`);
         }
-        return article.author.id === user.id || activeRoleValue === 'admin';
+        return article.author.id === user.id;
       case 'users':
         if (!dbUser) {
           throw new NotFoundException(`User with id ${user.id} not found`);
         }
-        return dbUser.id === user.id || activeRoleValue === 'admin';
+        return dbUser.id === user.id;
       default:
         return false;
     }
